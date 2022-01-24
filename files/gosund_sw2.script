@@ -1,0 +1,94 @@
+>D 100
+rng=235
+dimh=""
+slider=0
+power=0
+p:dimval=1
+a=""
+b=""
+c=""
+d=0
+f=0
+;set the hex code below to the largest value possible that will turn off the relay with SerialSend5
+off=0x90
+
+>B
+dp0
+rng-=off
+=#scDim(dimval)
+
+>E
+slider=Dimmer
+if chg[slider]>0
+then
+; dim according slider
+if slider>0 and dimval!=slider
+then
+dimval=slider
+=#scDim(dimval)
+=>SerialSend5 %dimh%
+endif
+endif
+print power is %power%
+if pwr[1]!=power
+then
+if pwr[1]==1
+then
+=>SerialSend5 %dimh%
+power=1
+else
+=>Serialsend5 00
+power=0
+endif
+endif
+
+a=SerialReceived
+if sl(a)>0
+then
+;process the first and second hex nibbles
+b=sb(a -8 1)
+c=sb(a -7 1) 
+a=""
+;convert the first nibble to decimal – max value is 0x60
+f=b
+f*=16
+;handle second nibble which may be 0x0-0xf
+d=c
+if d==0
+then
+switch c
+case "A"
+d=10
+case "B"
+d=11
+case "C"
+d=12
+case "D"
+d=13
+case "E"
+d=14
+case "F"
+d=15
+ends
+endif
+;add first and second nibbles then to Tasmota dimming path
+f+=d
+=>dimmer %f%
+endif
+
+#scDim(dimval)
+dimh=hn((rng*dimval/100)+off)
+=>print Scaled brightness is %dimh%
+
+>S
+if pwr[1]!=power
+then
+if pwr[1]==1
+then
+=>SerialSend5 %dimh%
+power=1
+else
+=>Serialsend5 00
+power=0
+endif
+endif
